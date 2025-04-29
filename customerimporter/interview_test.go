@@ -1,6 +1,10 @@
 package customerimporter
 
 import (
+	"bytes"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -112,4 +116,99 @@ func TestSortDomainCounts(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestPrintDomainCounts(t *testing.T) {
+	data := []DomainCount{
+		{"example.com", 2},
+		{"test.com", 1},
+	}
+	var buf bytes.Buffer
+	err := PrintDomainCounts(data, &buf)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	output := buf.String()
+	if !strings.Contains(output, "example.com: 2") || !strings.Contains(output, "test.com: 1") {
+		t.Errorf("Unexpected output: %s", output)
+	}
+}
+
+func TestReadEmailsFromCSV_FileNotFound(t *testing.T) {
+	_, err := ReadEmailsFromCSV("nonexistent.csv")
+	if err == nil {
+		t.Error("Expected error for non-existent file, got nil")
+	}
+}
+
+func TestReadEmailsFromCSV_InvalidFormat(t *testing.T) {
+	filename := "broken.csv"
+	content := "id,name,email\n1,Omer\n2,Ali,ali@test.com\n"
+	err := os.WriteFile(filename, []byte(content), 0644)
+	if err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(filename); err != nil {
+			t.Logf("warning: failed to remove temp file %s: %v", filename, err)
+		}
+	}()
+
+	ch, err := ReadEmailsFromCSV(filename)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	count := 0
+	for range ch {
+		count++
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 valid email, got %d", count)
+	}
+}
+
+func TestReadEmailsFromCSV_Valid(t *testing.T) {
+	filename := "valid.csv"
+	content := "id,name,email\n1,Omer,omer@example.com\n2,Ali,ali@test.com\n"
+	err := os.WriteFile(filename, []byte(content), 0644)
+	if err != nil {
+		t.Fatalf("failed to create csv: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(filename); err != nil {
+			t.Logf("warning: failed to remove temp file %s: %v", filename, err)
+		}
+	}()
+
+	ch, err := ReadEmailsFromCSV(filename)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var results []string
+	for email := range ch {
+		results = append(results, email)
+	}
+
+	if len(results) != 2 {
+		t.Errorf("expected 2 emails, got %d", len(results))
+	}
+}
+
+type errorWriter struct{}
+
+func (e *errorWriter) Write(_ []byte) (int, error) {
+	return 0, fmt.Errorf("write error")
+}
+
+func TestPrintDomainCounts_Error(t *testing.T) {
+	writer := &errorWriter{}
+	domains := []DomainCount{{Domain: "test.com", Count: 1}}
+
+	err := PrintDomainCounts(domains, writer)
+	if err == nil || !strings.Contains(err.Error(), "write error") {
+		t.Errorf("expected write error, got %v", err)
+	}
 }
