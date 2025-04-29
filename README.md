@@ -9,7 +9,6 @@ A command-line application that reads a CSV file of customer emails, counts doma
 - Counts domain occurrences.
 - Supports sorting by domain name or usage count (ascending or descending).
 - Outputs results to terminal or file.
-- Handles invalid email addresses gracefully with colored log warnings.
 
 ## Usage
 
@@ -56,12 +55,14 @@ customercli --sort=count --order=asc --output=output.txt customers.csv
 ```
 .
 ├── cmd/
-│   └── main.go                  # CLI entry point
+│   ├── main.go           # CLI entry
+│   └── main_test.go      # CLI tests
 ├── customerimporter/
-│   ├── interview.go              # Core logic (domain extraction, counting, sorting)
-│   └── interview_test.go         # Unit tests for core logic
-├── go.mod                        # Go module file
-└── README.md                     # Project documentation
+│   ├── interview.go      # Core logic
+│   └── interview_test.go # Unit tests
+├── go.mod
+└── README.md
+
 ```
 
 ## How to Build
@@ -97,10 +98,7 @@ go run ./cmd --sort=count customers.csv
 ## Developer Notes
 
 - Written in Go, using only the standard library (no external packages).
-- Uses colored logging to distinguish `[INFO]`, `[WARNING]`, and `[ERROR]` messages for better clarity.
-- Gracefully handles file opening and closing using `defer`.
 - Efficient memory handling using channels and goroutines while reading CSV files.
-- Unit tests included for core logic (`interview.go`).
 
 ---
 
